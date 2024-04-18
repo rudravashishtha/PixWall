@@ -37,7 +37,7 @@ const WelcomeScreen = () => {
             entering={FadeInDown.delay(400).springify()}
             style={styles.title}
           >
-            Pixels
+            Pix Wall
           </Animated.Text>
           <Animated.Text
             entering={FadeInDown.delay(500).springify()}

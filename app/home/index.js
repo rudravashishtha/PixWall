@@ -30,7 +30,7 @@ const HomeScreen = () => {
       {/* Header */}
       <View style={styles.header}>
         <Pressable>
-          <Text style={styles.title}>Pixels</Text>
+          <Text style={styles.title}>Pix Wall</Text>
         </Pressable>
         <Pressable>
           <FontAwesome6
