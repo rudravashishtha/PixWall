@@ -14,7 +14,9 @@ import { hp, wp } from "../../helpers/common";
 import Categories from "../../components/categories";
 import { apiCall } from "../../api";
 import ImageGrid from "../../components/imageGrid";
-import { debounce } from "lodash";
+import { debounce, filter } from "lodash";
+import FiltersModal from "../../components/filtersModal";
+import { ActivityIndicator } from "react-native";
 
 var page = 1;
 
@@ -23,9 +25,12 @@ const HomeScreen = () => {
   const paddingTop = top > 0 ? top + 10 : 30;
   const [search, setSearch] = useState("");
   const [images, setImages] = useState([]);
+  const [filters, setFilters] = useState(null);
 
   const [activeCategory, setActiveCategory] = useState(null);
   const searchInput = useRef(null);
+
+  const modalRef = useRef(null);
 
   useEffect(() => {
     fetchImages();
@@ -40,6 +45,57 @@ const HomeScreen = () => {
     }
   };
 
+  const openFiltersModal = () => {
+    modalRef?.current?.present(); // Open the modal
+  };
+
+  const closeFiltersModal = () => {
+    modalRef?.current?.close(); // Close the modal
+  };
+
+  const applyFilters = () => {
+    if (filters) {
+      page = 1;
+      setImages([]);
+      let params = { page, ...filters };
+      if (activeCategory) params.category = activeCategory;
+      if (search) params.q = search;
+      fetchImages(params, false);
+    }
+    // // delay 200ms
+    setTimeout(() => {
+      closeFiltersModal();
+    }, 200);
+  };
+  const resetFilters = () => {
+    // Reload the images
+    if (filters) {
+      page = 1;
+      setFilters(null);
+      setImages([]);
+      let params = { page };
+      if (activeCategory) params.category = activeCategory;
+      if (search) params.q = search;
+      fetchImages(params, false);
+    }
+    // delay 200ms
+    setTimeout(() => {
+      closeFiltersModal();
+    }, 200);
+  };
+
+  const clearThisFilter = (filterName) => {
+    let newFilters = { ...filters };
+    delete newFilters[filterName];
+    setFilters(newFilters);
+    page = 1;
+    setImages([]);
+    let params = { page, ...newFilters };
+    if (activeCategory) params.category = activeCategory;
+    if (search) params.q = search;
+    fetchImages(params, false);
+  };
+
   const handleChangeCategory = (cat) => {
     setActiveCategory(cat);
     clearSearch();
@@ -47,6 +103,7 @@ const HomeScreen = () => {
     page = 1;
     let params = {
       page,
+      ...filters,
     };
     if (cat) params.category = cat;
     fetchImages(params, false);
@@ -59,7 +116,7 @@ const HomeScreen = () => {
       page = 1;
       setImages([]);
       setActiveCategory(null);
-      fetchImages({ page, q: text }, false);
+      fetchImages({ page, q: text, ...filters }, false);
     }
 
     if (text == "") {
@@ -68,7 +125,7 @@ const HomeScreen = () => {
       searchInput?.current?.clear();
       setImages([]);
       setActiveCategory(null); // clear category while searching
-      fetchImages({ page }, false);
+      fetchImages({ page, ...filters }, false);
     }
   };
 
@@ -86,7 +143,7 @@ const HomeScreen = () => {
         <Pressable>
           <Text style={styles.title}>Pix Wall</Text>
         </Pressable>
-        <Pressable>
+        <Pressable onPress={openFiltersModal}>
           <FontAwesome6
             name="bars-staggered"
             size={22}
@@ -134,12 +191,69 @@ const HomeScreen = () => {
           />
         </View>
 
+        {/* Filters on Home */}
+        {filters && (
+          <View style={{ flexDirection: "row", justifyContent: "center" }}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.filters}
+            >
+              {Object.keys(filters).map((key, index) => {
+                return (
+                  <View key={key} style={styles.filterItem}>
+                    {key == "colors" ? (
+                      <View
+                        style={{
+                          width: 30,
+                          height: 20,
+                          borderRadius: 7,
+                          backgroundColor: filters[key],
+                        }}
+                      />
+                    ) : (
+                      <Text style={styles.filterItemText}>{filters[key]}</Text>
+                    )}
+                    <Pressable
+                      onPress={() => clearThisFilter(key)}
+                      style={styles.filterCloseIcon}
+                    >
+                      <Ionicons
+                        name="close"
+                        size={14}
+                        color={theme.colors.neutral(0.9)}
+                      />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* Images Masonry Grid */}
         <View>{images.length > 0 && <ImageGrid images={images} />}</View>
+
+        {/* Loading */}
+        <View
+          style={{
+            marginBottom: 70,
+            marginTop: images.length > 0 ? 10 : 70,
+          }}
+        >
+          <ActivityIndicator size="large" color={theme.colors.neutral(0.6)} />
+        </View>
       </ScrollView>
 
       {/* Filters Modal */}
-      
+      <FiltersModal
+        modalRef={modalRef}
+        onClose={closeFiltersModal}
+        onApply={applyFilters}
+        onReset={resetFilters}
+        filters={filters}
+        setFilters={setFilters}
+      />
     </View>
   );
 };
@@ -187,6 +301,27 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.neutral(0.1),
     padding: 8,
     borderRadius: theme.radius.sm,
+  },
+  filters: {
+    paddingHorizontal: wp(4),
+    gap: 10,
+  },
+  filterItem: {
+    backgroundColor: theme.colors.grayBG,
+    padding: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: theme.radius.xs,
+    gap: 10,
+    paddingHorizontal: 10,
+  },
+  filterItemText: {
+    fontSize: hp(1.8),
+  },
+  filterCloseIcon: {
+    backgroundColor: theme.colors.neutral(0.1),
+    padding: 4,
+    borderRadius: 7,
   },
 });
 
