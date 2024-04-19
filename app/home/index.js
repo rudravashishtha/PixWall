@@ -6,24 +6,78 @@ import {
   ScrollView,
   TextInput,
 } from "react-native";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Feather, FontAwesome6, Ionicons } from "@expo/vector-icons";
 import { theme } from "../../constants/theme";
 import { hp, wp } from "../../helpers/common";
 import Categories from "../../components/categories";
+import { apiCall } from "../../api";
+import ImageGrid from "../../components/imageGrid";
+import { debounce } from "lodash";
+
+var page = 1;
 
 const HomeScreen = () => {
   const { top } = useSafeAreaInsets();
   const paddingTop = top > 0 ? top + 10 : 30;
   const [search, setSearch] = useState("");
+  const [images, setImages] = useState([]);
+
+  const [activeCategory, setActiveCategory] = useState(null);
   const searchInput = useRef(null);
-  const [activeCategory, setActiveCategory] = useState(null)
+
+  useEffect(() => {
+    fetchImages();
+  }, []);
+
+  const fetchImages = async (params = { page: 1 }, append = false) => {
+    let res = await apiCall(params);
+
+    if (res.success && res?.data?.hits) {
+      if (append) setImages([...images, ...res.data.hits]);
+      else setImages(res.data.hits);
+    }
+  };
 
   const handleChangeCategory = (cat) => {
-    setActiveCategory(cat)
-  }
+    setActiveCategory(cat);
+    clearSearch();
+    setImages([]);
+    page = 1;
+    let params = {
+      page,
+    };
+    if (cat) params.category = cat;
+    fetchImages(params, false);
+  };
 
+  const handleSearch = (text) => {
+    setSearch(text);
+    if (text.length > 2) {
+      // Search for the text
+      page = 1;
+      setImages([]);
+      setActiveCategory(null);
+      fetchImages({ page, q: text }, false);
+    }
+
+    if (text == "") {
+      // Reset the results
+      page = 1;
+      searchInput?.current?.clear();
+      setImages([]);
+      setActiveCategory(null); // clear category while searching
+      fetchImages({ page }, false);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearch("");
+    searchInput?.current?.clear();
+  };
+
+  const handleTextDebounce = useCallback(debounce(handleSearch, 400), []);
 
   return (
     <View style={[styles.container, { paddingTop }]}>
@@ -53,13 +107,16 @@ const HomeScreen = () => {
           </View>
           <TextInput
             placeholder="Search for Photos"
-            value={search}
+            // value={search}
             ref={searchInput}
-            onChangeText={(value) => setSearch(value)}
+            onChangeText={handleTextDebounce}
             style={styles.searchInput}
           />
           {search && (
-            <Pressable style={styles.closeIcon}>
+            <Pressable
+              onPress={() => handleSearch("")}
+              style={styles.closeIcon}
+            >
               <Ionicons
                 name="close"
                 size={24}
@@ -71,12 +128,18 @@ const HomeScreen = () => {
 
         {/* Categories */}
         <View style={styles.categories}>
-          <Categories 
+          <Categories
             activeCategory={activeCategory}
             handleChangeCategory={handleChangeCategory}
           />
         </View>
+
+        {/* Images Masonry Grid */}
+        <View>{images.length > 0 && <ImageGrid images={images} />}</View>
       </ScrollView>
+
+      {/* Filters Modal */}
+      
     </View>
   );
 };
@@ -118,6 +181,7 @@ const styles = StyleSheet.create({
     borderRadius: theme.radius.sm,
     paddingVertical: 10,
     fontSize: hp(1.8),
+    paddingLeft: 10,
   },
   closeIcon: {
     backgroundColor: theme.colors.neutral(0.1),
