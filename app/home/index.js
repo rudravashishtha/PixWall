@@ -26,17 +26,18 @@ const HomeScreen = () => {
   const [search, setSearch] = useState("");
   const [images, setImages] = useState([]);
   const [filters, setFilters] = useState(null);
-
   const [activeCategory, setActiveCategory] = useState(null);
-  const searchInput = useRef(null);
+  const [isEndReached, setIsEndReached] = useState(false);
 
+  const searchInput = useRef(null);
   const modalRef = useRef(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     fetchImages();
   }, []);
 
-  const fetchImages = async (params = { page: 1 }, append = false) => {
+  const fetchImages = async (params = { page: 1 }, append = true) => {
     let res = await apiCall(params);
 
     if (res.success && res?.data?.hits) {
@@ -134,25 +135,56 @@ const HomeScreen = () => {
     searchInput?.current?.clear();
   };
 
+  const handleScroll = (event) => {
+    let contentHeight = event.nativeEvent.contentSize.height;
+
+    let layoutHeight = event.nativeEvent.layoutMeasurement.height;
+    let scrollOffset = event.nativeEvent.contentOffset.y;
+    const bottomPosition = contentHeight - layoutHeight;
+
+    if (scrollOffset >= bottomPosition - 1) {
+      if (!isEndReached) {
+        // Load more images
+        setIsEndReached(true);
+        ++page;
+        let params = { page, ...filters };
+        if (activeCategory) params.category = activeCategory;
+        if (search) params.q = search;
+        fetchImages(params); // Append the images to the existing ones
+      }
+    } else if (isEndReached) {
+      setIsEndReached(false);
+    }
+  };
+
+  const handleScrollUp = () => {
+    scrollRef?.current?.scrollTo({ y: 0, animated: true }); // Scroll to top
+  };
+
   const handleTextDebounce = useCallback(debounce(handleSearch, 400), []);
 
   return (
     <View style={[styles.container, { paddingTop }]}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable>
+        <Pressable onPress={handleScrollUp}>
           <Text style={styles.title}>Pix Wall</Text>
         </Pressable>
         <Pressable onPress={openFiltersModal}>
           <FontAwesome6
             name="bars-staggered"
-            size={22}
+            size={24}
             color={theme.colors.neutral(0.7)}
           />
         </Pressable>
       </View>
 
-      <ScrollView contentContainerStyle={{ gap: 15 }}>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={5} // how often we update the scroll event (in ms)
+        ref={scrollRef}
+        contentContainerStyle={{ gap: 15 }}
+      >
         {/* Search Bar */}
         <View style={styles.searchBar}>
           <View style={styles.searchIcon}>
