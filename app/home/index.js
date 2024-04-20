@@ -18,6 +18,7 @@ import ImageGrid from "../../components/imageGrid";
 import { debounce, filter } from "lodash";
 import FiltersModal from "../../components/filtersModal";
 import { ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
 
 var page = 1;
 
@@ -29,9 +30,9 @@ const HomeScreen = () => {
   const [filters, setFilters] = useState(null);
   const [activeCategory, setActiveCategory] = useState(null);
   const [isEndReached, setIsEndReached] = useState(false);
-
-  // Add a state variable to track whether all images have been loaded
   const [allImagesLoaded, setAllImagesLoaded] = useState(false);
+
+  const router = useRouter();
 
   const searchInput = useRef(null);
   const modalRef = useRef(null);
@@ -41,14 +42,6 @@ const HomeScreen = () => {
     fetchImages();
   }, []);
 
-  // const fetchImages = async (params = { page: 1 }, append = true) => {
-  //   let res = await apiCall(params);
-
-  //   if (res.success && res?.data?.hits) {
-  //     if (append) setImages([...images, ...res.data.hits]);
-  //     else setImages(res.data.hits);
-  //   }
-  // };
 
   // Update fetchImages function to set allImagesLoaded based on API response
   const fetchImages = async (params = { page: 1 }, append = true) => {
@@ -288,7 +281,7 @@ const HomeScreen = () => {
         )}
 
         {/* Images Masonry Grid */}
-        <View>{images.length > 0 && <ImageGrid images={images} />}</View>
+        <View>{images.length > 0 && <ImageGrid images={images} router={router} />}</View>
 
         {/* Loading */}
         <View
