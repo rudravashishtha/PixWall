@@ -5,6 +5,7 @@ import {
   Pressable,
   ScrollView,
   TextInput,
+  Linking,
 } from "react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,6 +30,9 @@ const HomeScreen = () => {
   const [activeCategory, setActiveCategory] = useState(null);
   const [isEndReached, setIsEndReached] = useState(false);
 
+  // Add a state variable to track whether all images have been loaded
+  const [allImagesLoaded, setAllImagesLoaded] = useState(false);
+
   const searchInput = useRef(null);
   const modalRef = useRef(null);
   const scrollRef = useRef(null);
@@ -37,12 +41,32 @@ const HomeScreen = () => {
     fetchImages();
   }, []);
 
+  // const fetchImages = async (params = { page: 1 }, append = true) => {
+  //   let res = await apiCall(params);
+
+  //   if (res.success && res?.data?.hits) {
+  //     if (append) setImages([...images, ...res.data.hits]);
+  //     else setImages(res.data.hits);
+  //   }
+  // };
+
+  // Update fetchImages function to set allImagesLoaded based on API response
   const fetchImages = async (params = { page: 1 }, append = true) => {
     let res = await apiCall(params);
 
     if (res.success && res?.data?.hits) {
-      if (append) setImages([...images, ...res.data.hits]);
-      else setImages(res.data.hits);
+      if (append) {
+        setImages([...images, ...res.data.hits]);
+      } else {
+        setImages(res.data.hits);
+      }
+
+      // Check if there are more images to load
+      if (res.data.hits.length === 0) {
+        setAllImagesLoaded(true);
+      } else {
+        setAllImagesLoaded(false);
+      }
     }
   };
 
@@ -273,7 +297,46 @@ const HomeScreen = () => {
             marginTop: images.length > 0 ? 10 : 70,
           }}
         >
-          <ActivityIndicator size="large" color={theme.colors.neutral(0.6)} />
+          {!allImagesLoaded && (
+            <ActivityIndicator size="large" color={theme.colors.neutral(0.6)} />
+          )}
+          {allImagesLoaded && (
+            <View
+              style={{
+                textAlign: "center",
+                color: theme.colors.neutral(0.6),
+                justifyContent: "center",
+                alignItems: "center",
+                marginVertical: 20,
+              }}
+            >
+              <Text style={{ color: theme.colors.neutral(1) }}>
+                You've reached the end
+              </Text>
+              <Pressable
+                onPress={() =>
+                  Linking.openURL("https://github.com/rudravashishtha")
+                }
+              >
+                <Text
+                  style={{
+                    fontWeight: theme.fontWeights.bold,
+                    margin: wp(3)
+                  }}
+                >
+                  Made with ❤️ by{" "}
+                  <Text
+                    style={{
+                      textDecorationLine: "underline",
+                      color: "blue",
+                    }}
+                  >
+                    Rudra Vashishtha
+                  </Text>
+                </Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       </ScrollView>
 
